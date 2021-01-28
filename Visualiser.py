@@ -487,11 +487,18 @@ class tile:
                 rightp = vertex(right.X(), right.Y(), 0)
                 dr = vertex(((i - sx) + 1) * multip, ((j - sy) + 1) * multip, pic.get_at([i + 1, j + 1])[0] * vmul // 255)
                 drp = vertex(dr.X(), dr.Y(), 0)
-                self.tile_mesh.polygons.append(polygon([me, up, dr], [int(255 * srf(mep, upp, drp) / srf(me, up, dr))] * 3))
-                self.tile_mesh.polygons.append(polygon([me, dr, right], [int(255 * srf(mep, drp, rightp) / srf(me, dr, right))] * 3))
+                #colO = [int(255 * srf(mep, upp, drp) / srf(me, up, dr))] * 3
+                colO = list(pic.get_at([i, j]))[:3]
+                colT = [int(255 * srf(mep, drp, rightp) / srf(me, dr, right))] * 3
+                self.tile_mesh.polygons.append(polygon([me, up, dr], colO))
+                self.tile_mesh.polygons.append(polygon([me, dr, right], colO))
         print('rewriting')
         self.tile_mesh = mesh_optimised(self.tile_mesh.polygons)
         print(len(self.tile_mesh.verts))
+
+def sortt():
+    global tl
+    tl.tile_mesh.sort()
 
 SMUL = 1000
 
@@ -501,6 +508,7 @@ print(v.get_rotation())
 print(v.apply_rot_y(rot[1]).pos)
 print(sorted([0, 1, 2, 3]))
 cam = camera()
+cam.rot = [0, -PI / 4, -PI / 4]
 pol = polygon([vertex(700, 200, 250), vertex(700, -200, 250), vertex(700, 20, -50)])
 #cube = make_cube(100, vertex(650, -50, -50), [[0, 100, 0], [70, 50, 0]])
 NAME = 'Result.bmp'
@@ -579,6 +587,8 @@ while kg:
             pointer = 0
             scr.fill(SKYCOL)
             print('sorting')
+            th = threading.Thread(target=tl.tile_mesh.sort, args=[])
+            #th.start()
             tl.tile_mesh.sort()
     except ZeroDivisionError:
         pass
