@@ -299,25 +299,13 @@ class mesh_optimised:
             self.polygons.append(polygon_optimised([L + 1, L + 2, L + 3], pol.color.copy()))
         #self.optimise()
     def sort(self, presorts=[]):
-        if len(presorts) == 0:
-            answ = self.verts.copy()
-            for i in answ.keys():
-                answ[i] = drop(answ[i], cam)
-            dists = self.verts.copy()
-            for i in dists.keys():
-                dists[i] = dist(dists[i], cam.pos)
-            #print(dists)
-            self.s_polys = sorted([[p.dist(cam, dists), p] for p in self.polygons])[::-1]
-            self.answ = answ
-            self.dists = dists
-        else:
-            self.s_polys = presorts[0]
-            self.answ = presorts[1]
-            self.dists = presorts[2]
+        self.s_polys = presorts[0]
+        self.answ = presorts[1]
+        self.dists = presorts[2]
     def make_presort(self):
         answ = self.verts.copy()
-        for i in answ.keys():
-            answ[i] = drop(answ[i], cam)
+        #for i in answ.keys():
+        #    answ[i] = drop(answ[i], cam)
         dists = self.verts.copy()
         for i in dists.keys():
             dists[i] = dist(dists[i], cam.pos)
@@ -514,6 +502,11 @@ def sortt():
     global tl
     tl.tile_mesh.sort()
 
+def imload(name, pos=[0, 0]):
+    pc = pygame.image.load(name)
+    pc.set_colorkey(pc.get_at(pos))
+    return pc
+
 SMUL = 1000
 
 v = vertex(1, 0, 1)
@@ -525,11 +518,15 @@ cam = camera()
 cam.rot = [0, -PI / 4, -PI / 4]
 pol = polygon([vertex(700, 200, 250), vertex(700, -200, 250), vertex(700, 20, -50)])
 #cube = make_cube(100, vertex(650, -50, -50), [[0, 100, 0], [70, 50, 0]])
-NAME = 'Uteshev.bmp'
+NAME = input("Heightmap name -> ")
+if NAME == '':
+    NAME = 'Loaded.bmp'
 STEP = 10
 print('Generating tile...')
 tl = tile(NAME)
 scr = pygame.display.set_mode(cam.resolution)
+pygame.display.set_icon(imload('assets/Logo.bmp'))
+pygame.display.set_caption('Landscape viewer')
 kg = True
 speed = vertex()
 tm = time.monotonic()
@@ -543,11 +540,15 @@ print('Making presorts')
 for i in range(4):
     print(i + 1, 'of 4')
     cam.rot = [0, 0, PI / 4 + PI * i / 2]
-    length = max(pic.get_height(), pic.get_width()) * STEP * 2
+    length = max(pic.get_height(), pic.get_width()) * STEP * 100
     cam.pos = vertex(-cos(cam.rot[2]) * cos(cam.rot[1]) * length, -sin(cam.rot[2]) * cos(cam.rot[1]) * length, sin(-cam.rot[1]) * length)
-    presorts.append(tl.tile_mesh.make_presort())
+    if i < 2:
+        presorts.append(tl.tile_mesh.make_presort())
+    else:
+        presorts.append(presorts[i - 2].copy())
+        presorts[-1][0] = presorts[-1][0][::-1]
 print(len(presorts))
-print('Sorting...')
+#print('Sorting...')
 #tl.tile_mesh.sort()
 OK = True
 print('ready')
@@ -609,10 +610,10 @@ while kg:
             OK = False
             pointer = 0
             scr.fill(SKYCOL)
-            print('sorting')
+            #print('sorting')
             #th = threading.Thread(target=tl.tile_mesh.sort, args=[])
             #th.start()
-            pres = int((cam.rot[2] - 0 * PI / 4 + 0.000001) / (PI / 2)) % 4
+            pres = int(((cam.rot[2] % (2 * PI)) - 0 * PI / 4 + 0.000001) / (PI / 2)) % 4
             tl.tile_mesh.sort(presorts=presorts[pres])
     except ZeroDivisionError:
         pass
