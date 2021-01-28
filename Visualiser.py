@@ -229,7 +229,7 @@ class polygon_optimised:
     def dist(self, cam, dists):
         return sum([dists[x] for x in self.inds]) / 3
     def draw(self, cam, drops, scr, dists):
-        answ = [drops[self.inds[0]], drops[self.inds[1]], drops[self.inds[2]]]
+        answ = [drop(drops[self.inds[0]], cam), drop(drops[self.inds[1]], cam), drop(drops[self.inds[2]], cam)]
         A = vertex(*answ[0])
         B = vertex(*answ[1])
         C = vertex(*answ[2])
@@ -298,7 +298,23 @@ class mesh_optimised:
                 self.verts[L + 1 + i] = pol.verts[i]
             self.polygons.append(polygon_optimised([L + 1, L + 2, L + 3], pol.color.copy()))
         #self.optimise()
-    def sort(self):
+    def sort(self, presorts=[]):
+        if len(presorts) == 0:
+            answ = self.verts.copy()
+            for i in answ.keys():
+                answ[i] = drop(answ[i], cam)
+            dists = self.verts.copy()
+            for i in dists.keys():
+                dists[i] = dist(dists[i], cam.pos)
+            #print(dists)
+            self.s_polys = sorted([[p.dist(cam, dists), p] for p in self.polygons])[::-1]
+            self.answ = answ
+            self.dists = dists
+        else:
+            self.s_polys = presorts[0]
+            self.answ = presorts[1]
+            self.dists = presorts[2]
+    def make_presort(self):
         answ = self.verts.copy()
         for i in answ.keys():
             answ[i] = drop(answ[i], cam)
@@ -306,12 +322,10 @@ class mesh_optimised:
         for i in dists.keys():
             dists[i] = dist(dists[i], cam.pos)
         #print(dists)
-        self.s_polys = sorted([[p.dist(cam, dists), p] for p in self.polygons])[::-1]
-        self.answ = answ
-        self.dists = dists
+        return [sorted([[p.dist(cam, dists), p] for p in self.polygons])[::-1], answ, dists]
     def draw(self, cam, picture, pointer, step):
         for D, pol in self.s_polys[min(len(self.polygons), pointer):min(len(self.polygons), pointer + step)]:
-            pol.draw(cam, self.answ, picture, self.dists)
+            pol.draw(cam, self.verts, picture, self.dists)
     def rotate(self, rot, orig = vertex()):
         for i in range(len(self.verts)):
             self.verts[i] = self.verts[i].rotated_origin(orig, rot)
@@ -511,7 +525,7 @@ cam = camera()
 cam.rot = [0, -PI / 4, -PI / 4]
 pol = polygon([vertex(700, 200, 250), vertex(700, -200, 250), vertex(700, 20, -50)])
 #cube = make_cube(100, vertex(650, -50, -50), [[0, 100, 0], [70, 50, 0]])
-NAME = 'Result.bmp'
+NAME = 'Uteshev.bmp'
 STEP = 10
 print('Generating tile...')
 tl = tile(NAME)
@@ -522,10 +536,19 @@ tm = time.monotonic()
 mpos = vertex()
 log = open('log.txt', 'w')
 pointer = 0
-step = 10
-print('Sorting...')
-tl.tile_mesh.sort()
+step = 100
+presorts = []
 pic = pygame.image.load(NAME)
+print('Making presorts')
+for i in range(4):
+    print(i + 1, 'of 4')
+    cam.rot = [0, 0, PI / 4 + PI * i / 2]
+    length = max(pic.get_height(), pic.get_width()) * STEP * 2
+    cam.pos = vertex(-cos(cam.rot[2]) * cos(cam.rot[1]) * length, -sin(cam.rot[2]) * cos(cam.rot[1]) * length, sin(-cam.rot[1]) * length)
+    presorts.append(tl.tile_mesh.make_presort())
+print(len(presorts))
+print('Sorting...')
+#tl.tile_mesh.sort()
 OK = True
 print('ready')
 while kg:
@@ -587,9 +610,10 @@ while kg:
             pointer = 0
             scr.fill(SKYCOL)
             print('sorting')
-            th = threading.Thread(target=tl.tile_mesh.sort, args=[])
+            #th = threading.Thread(target=tl.tile_mesh.sort, args=[])
             #th.start()
-            tl.tile_mesh.sort()
+            pres = int((cam.rot[2] - 0 * PI / 4 + 0.000001) / (PI / 2)) % 4
+            tl.tile_mesh.sort(presorts=presorts[pres])
     except ZeroDivisionError:
         pass
     #cam.pos = cam.pos + (speed * delta_time * SMUL).rotated(cam.rot)
