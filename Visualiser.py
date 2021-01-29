@@ -489,11 +489,15 @@ class tile:
                 rightp = vertex(right.X(), right.Y(), 0)
                 dr = vertex(((i - sx) + 1) * multip, ((j - sy) + 1) * multip, pic.get_at([i + 1, j + 1])[0] * vmul // 255)
                 drp = vertex(dr.X(), dr.Y(), 0)
-                #colO = [int(255 * srf(mep, upp, drp) / srf(me, up, dr))] * 3
-                colO = list(pic.get_at([i, j]))[:3]
-                colT = [int(255 * srf(mep, drp, rightp) / srf(me, dr, right))] * 3
+                using_original = True
+                if using_original:
+                    colO = colO = list(pic.get_at([i, j]))[:3]
+                    colT = colO
+                else:
+                    colO = [int(255 * srf(mep, upp, drp) / srf(me, up, dr))] * 3
+                    colT = [int(255 * srf(mep, drp, rightp) / srf(me, dr, right))] * 3
                 self.tile_mesh.polygons.append(polygon([me, up, dr], colO))
-                self.tile_mesh.polygons.append(polygon([me, dr, right], colO))
+                self.tile_mesh.polygons.append(polygon([me, dr, right], colT))
         print('rewriting')
         self.tile_mesh = mesh_optimised(self.tile_mesh.polygons)
         print(len(self.tile_mesh.verts))
@@ -533,13 +537,13 @@ tm = time.monotonic()
 mpos = vertex()
 log = open('log.txt', 'w')
 pointer = 0
-step = 100
+step = 20
 presorts = []
 pic = pygame.image.load(NAME)
 print('Making presorts')
 for i in range(4):
     print(i + 1, 'of 4')
-    cam.rot = [0, 0, PI / 4 + PI * i / 2]
+    cam.rot = [0, 0, PI * i / 2]
     length = max(pic.get_height(), pic.get_width()) * STEP * 100
     cam.pos = vertex(-cos(cam.rot[2]) * cos(cam.rot[1]) * length, -sin(cam.rot[2]) * cos(cam.rot[1]) * length, sin(-cam.rot[1]) * length)
     if i < 2:
@@ -596,7 +600,9 @@ while kg:
             if event.key in [pygame.K_d, pygame.K_RIGHT]:
                 speed = speed - vertex(0, 0, 1)
     #cam.rot = (vertex(*cam.rot) + mrel * delta_time * 40 / cam.resolution[0]).pos
-    cam.rot = (vertex(*cam.rot) + speed * 0.01).pos
+    cam.rot = (vertex(*cam.rot) + speed * delta_time * 2).pos
+    cam.rot[1] = cam.rot[1] % (PI * 2)
+    cam.rot[2] = cam.rot[2] % (PI * 2)
     length = max(pic.get_height(), pic.get_width()) * STEP * 2
     cam.pos = vertex(-cos(cam.rot[2]) * cos(cam.rot[1]) * length, -sin(cam.rot[2]) * cos(cam.rot[1]) * length, sin(-cam.rot[1]) * length)
     try:
@@ -613,7 +619,7 @@ while kg:
             #print('sorting')
             #th = threading.Thread(target=tl.tile_mesh.sort, args=[])
             #th.start()
-            pres = int(((cam.rot[2] % (2 * PI)) - 0 * PI / 4 + 0.000001) / (PI / 2)) % 4
+            pres = int(((cam.rot[2] % (2 * PI)) + 1 * PI / 4) / (PI / 2)) % 4
             tl.tile_mesh.sort(presorts=presorts[pres])
     except ZeroDivisionError:
         pass
